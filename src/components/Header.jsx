@@ -17,7 +17,7 @@ const Header = ({ selectedModel, activeLane }) => (
 
           <div>
             <h1 className="text-lg font-bold bg-linear-to-r from-white to-zinc-300 bg-clip-text text-transparent sm:text-xl">
-              RD&apos;s NVIDIA Assistant
+              RD&apos;s Assistant
             </h1>
             <p className="text-xs text-zinc-500">
               Chat, vision, and document routing with NVIDIA APIs
