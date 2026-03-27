@@ -88,7 +88,7 @@ src/
 Create a `.env` file:
 
 ```id="env1"
-VITE_NVIDIA_API_KEY=your_nvidia_api_key_here
+NVIDIA_API_KEY=your_nvidia_api_key_here
 ```
 
 > Restart the development server after adding environment variables.
