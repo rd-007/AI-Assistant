@@ -1,183 +1,213 @@
-# RD's Assistant
+# 🚀 RD's Assistant
 
-A React + Vite AI assistant UI backed by NVIDIA APIs through a local Node proxy.
+### A Modern Multi-Input AI Interface Powered by NVIDIA LLMs
 
-This project supports:
+> A production-style AI assistant built with **React + Vite**, designed to handle **text, file, and image inputs** with a resilient architecture that adapts to real-world API limitations.
 
-- Multi-thread chat history with local persistence
-- Standard chat completions
-- Vision requests with image input
-- Document parsing flow for supported file types
-- A local proxy server to avoid browser-side CORS issues and keep the API key off the frontend
+---
 
-## Tech Stack
+## ✨ Overview
 
-- React 19
-- Vite 7
-- Tailwind CSS 4
-- Node.js HTTP server for API proxying
-- NVIDIA hosted model endpoints
+RSD AI Assistant is a clean, high-performance AI interface that demonstrates **practical system design** — not just API usage.
 
-## Features
+Instead of relying on fragile free endpoints, this project uses:
 
-### Chat Threads
+* **NVIDIA LLM APIs** for stable text generation
+* **Client-side preprocessing** for file handling
+* **Fallback strategies** for unsupported features
 
-- Create, switch, and delete conversation threads
-- Thread data is stored in `localStorage`
-- Each thread keeps its own message history
+This ensures the app remains functional even under real-world constraints.
 
-### NVIDIA-Powered Workflows
+---
 
-- Text chat requests are proxied to NVIDIA chat completions
-- Image requests are routed through a vision-capable model
-- Document uploads are routed through a document parsing endpoint before summarization
+## 🧠 Key Highlights
 
-### Safer API Architecture
+* ⚡ **Fast & Responsive UI** – Built using Vite + React
+* 🧩 **Modular Architecture** – Clean separation of components & logic
+* 📄 **Universal File Processing** – Works across all models via text conversion
+* 🖼 **Image Handling with Fallback Logic** – Graceful degradation for unsupported models
+* 🔐 **Secure API Integration** – Environment-based key management
+* 🎯 **Scalable Design** – Easy to extend with new providers or models
 
-- The frontend calls local `/api/*` routes
-- The Node server forwards requests to NVIDIA
-- API keys stay on the server side instead of being exposed in the browser
+---
 
-## Project Structure
+## 🏗️ Architecture
 
-```text
-.
-├── src/
-│   ├── components/
-│   ├── constants/
-│   └── App.jsx
-├── scripts/
-│   └── dev.mjs
-├── server.mjs
-├── vite.config.js
-└── package.json
+```id="arch1"
+User Input (Text / File / Image)
+        ↓
+Preprocessing Layer
+(File → Text | Image → Fallback Prompt)
+        ↓
+Prompt Construction
+        ↓
+NVIDIA API (LLM)
+        ↓
+Response Parsing
+        ↓
+UI Rendering
 ```
 
-## Environment Variables
+---
 
-Create a `.env` file in the project root.
+## 📁 Project Structure
 
-```env
-NVIDIA_API_KEY=your_nvidia_api_key_here
-PORT=8787
+```id="struct1"
+src/
+│
+├── components/           # UI components
+│   ├── AssistantResponse.jsx
+│   ├── ErrorBanner.jsx
+│   ├── Header.jsx
+│   ├── PromptForm.jsx
+│   └── QuickActions.jsx
+│
+├── constants/            # Config & API logic
+│   ├── api.js
+│   └── models.js
+│
+├── App.jsx               # Core logic & state management
+├── main.jsx
+└── index.css
 ```
 
-Notes:
+---
 
-- `NVIDIA_API_KEY` is the preferred variable name.
-- The server also accepts `VITE_NVIDIA_API_KEY` for backward compatibility, but it is better not to expose provider keys through Vite-prefixed vars.
-- `PORT` is optional. The default is `8787`.
+## ⚙️ Tech Stack
 
-## Getting Started
+* **Frontend:** React (Vite)
+* **Styling:** Tailwind CSS
+* **Icons:** React Icons
+* **AI Backend:** NVIDIA NIM APIs
+* **State Management:** React Hooks
 
-### 1. Install dependencies
+---
 
-```bash
+## 🔑 Environment Setup
+
+Create a `.env` file:
+
+```id="env1"
+VITE_NVIDIA_API_KEY=your_nvidia_api_key_here
+```
+
+> Restart the development server after adding environment variables.
+
+---
+
+## 📦 Installation & Run
+
+```bash id="install1"
+git clone <your-repo-url>
+cd your-project-name
 npm install
-```
-
-### 2. Add your environment variables
-
-Create `.env` and add your NVIDIA API key.
-
-### 3. Run the app in development
-
-```bash
 npm run dev
 ```
 
-This starts:
+---
 
-- the Vite frontend
-- the local Node proxy server
+## 🔍 Feature Breakdown
 
-By default, open:
+### 💬 Chat System
 
-- frontend: `http://localhost:5173`
-- proxy health check: `http://localhost:8787/health`
+* Handles dynamic prompts
+* Supports structured responses
+* Includes typing animation effect
 
-## Available Scripts
+---
 
-### `npm run dev`
+### 📄 File Upload Handling
 
-Starts both the frontend and the local API proxy for development.
+* Reads file content in browser
+* Truncates large files safely
+* Injects into prompt as structured text
 
-### `npm run dev:web`
+---
 
-Starts only the Vite frontend.
+### 🖼 Image Handling
 
-### `npm run dev:api`
+* Attempts vision processing (if supported)
+* Falls back to descriptive prompt generation
+* Ensures zero crashes for unsupported models
 
-Starts only the local Node proxy server.
+---
 
-### `npm run build`
+### ⚡ Smart Prompt Engineering
 
-Builds the frontend for production.
+* Combines multiple inputs into a single optimized prompt
+* Maintains context clarity
+* Prevents token overflow
 
-### `npm start`
+---
 
-Starts the Node server and serves the built frontend from `dist/`.
+## 🧠 Engineering Decisions
 
-### `npm run lint`
+### 1. **Client-Side File Processing**
 
-Runs ESLint.
+Instead of relying on model-specific file APIs:
+→ Files are converted to text
+→ Works across all models
 
-## How Requests Flow
+---
 
-### Chat
+### 2. **Fallback-Based Image Handling**
 
-1. The frontend sends a request to `/api/chat`
-2. The local server forwards it to NVIDIA chat completions
-3. The response is returned to the active thread
+Instead of failing when vision isn’t available:
+→ Generates contextual prompt
+→ Maintains UX continuity
 
-### Vision
+---
 
-1. The user selects an image
-2. The frontend sends the prompt and image payload to `/api/chat`
-3. The server forwards the request to the NVIDIA vision-capable model
+### 3. **Provider Stability Focus**
 
-### Documents
+Switched from unstable free endpoints to:
+→ NVIDIA APIs for reliability
 
-1. The user uploads a supported document
-2. The frontend sends it to `/api/document-parse`
-3. The server forwards the request to the NVIDIA parse endpoint
-4. Extracted text is summarized through the chat model
+---
 
-## Current Models
+## ⚠️ Limitations
 
-The app is currently configured to use these model IDs:
+* ❌ Native image understanding depends on model capability
+* ❌ No streaming responses (yet)
+* ⚠️ API usage may be rate-limited on free tier
 
-- `meta/llama-3.1-8b-instruct`
-- `nvidia/llama-3.1-nemotron-nano-8b-v1`
-- `nvidia/nemotron-nano-12b-v2-vl`
-- `nvidia/nemotron-parse`
+---
 
-Model access depends on your NVIDIA account and API permissions.
+## 🔮 Future Enhancements
 
-## Production Notes
+* 🔁 Streaming responses (real-time typing)
+* 💾 Chat history persistence
+* 🧠 Multi-model routing system
+* 🖼 Full vision model integration
+* 📊 Token usage tracking
+* 🌐 Multi-provider support (OpenRouter + NVIDIA hybrid)
 
-- Build the frontend with `npm run build`
-- Start the server with `npm start`
-- The Node server serves static files from `dist/`
-- The proxy server is required because direct browser calls to NVIDIA endpoints are blocked by CORS
+---
 
-## Limitations
+## 🧑‍💻 Author
 
-- Thread storage is local to the browser and not synced across devices
-- Document parsing depends on NVIDIA endpoint compatibility and file support
-- Large or complex documents may require a more robust backend upload pipeline
-- There is no authentication or user account system in this project
+**Rajit Dakhane**
+Computer Engineering Student
+Focused on building practical, real-world AI systems
 
-## Future Improvements
+---
 
-- Thread rename and search
-- Streaming responses
-- Persistent backend storage for threads
-- Authentication
-- Better document upload handling for large files
-- Per-thread model preferences
+## 📌 What Makes This Project Stand Out
 
-## License
+This isn’t just an AI wrapper.
 
-MIT License
+It demonstrates:
 
+* **System resilience under API limitations**
+* **Practical engineering trade-offs**
+* **Clean frontend architecture**
+* **Real-world AI integration patterns**
+
+---
+
+## ⭐ Final Thought
+
+> Good AI apps don’t just use models —
+> they are designed to survive when models fail.
+
+---
