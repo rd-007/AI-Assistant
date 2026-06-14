@@ -117,6 +117,7 @@ function App() {
 
   const imageInputRef = useRef(null)
   const fileInputRef = useRef(null)
+  const abortRef = useRef(null) // PERF-21: cancel in-flight requests
 
   const activeThread = useMemo(() => {
     const preferred = threads.find((thread) => thread.id === activeThreadId)
@@ -131,9 +132,26 @@ function App() {
     }
   }, [activeThread, threads])
 
+  // FRONT-15: safe localStorage write — strip large data, catch quota errors
   useEffect(() => {
     if (typeof window === 'undefined') return
-    window.localStorage.setItem(THREADS_STORAGE_KEY, JSON.stringify(threads))
+    try {
+      const stripped = threads.map((t) => ({
+        ...t,
+        messages: (t.messages || []).map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          lane: m.lane,
+          modelId: m.modelId,
+          createdAt: m.createdAt,
+          // Intentionally omit imageData, dataUrl, and other large blobs
+        })),
+      }))
+      window.localStorage.setItem(THREADS_STORAGE_KEY, JSON.stringify(stripped))
+    } catch (e) {
+      console.warn('Failed to persist threads — localStorage may be full', e)
+    }
   }, [threads])
 
   useEffect(() => {
@@ -185,6 +203,8 @@ function App() {
   }
 
   const handleSelectThread = (threadId) => {
+    // PERF-21: cancel any in-flight request when switching threads
+    abortRef.current?.abort()
     setActiveThreadId(threadId)
     setError('')
   }
@@ -270,13 +290,14 @@ function App() {
     reader.readAsDataURL(file)
   }
 
-  const postJson = async (url, body) => {
+  const postJson = async (url, body, signal) => {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal, // PERF-21: support request cancellation
     })
 
     if (!response.ok) {
@@ -316,22 +337,29 @@ function App() {
     return reply
   }
 
-  const submitChatLane = async ({ textPrompt, modelId }) => {
+  // FRONT-13: accept conversation history for multi-turn context
+  const submitChatLane = async ({ textPrompt, modelId, history = [], signal }) => {
+    const historyMessages = history.map((msg) => ({
+      role: msg.role,
+      content: [{ type: 'text', text: msg.content }],
+    }))
+
     const data = await postJson(CHAT_API_URL, {
       model: modelId,
       messages: [
+        ...historyMessages,
         {
           role: 'user',
           content: [{ type: 'text', text: textPrompt }],
         },
       ],
       stream: false,
-    })
+    }, signal)
 
     return normalizeReply(data)
   }
 
-  const submitVisionLane = async ({ textPrompt, modelId, imageUrl }) => {
+  const submitVisionLane = async ({ textPrompt, modelId, imageUrl, signal }) => {
     const data = await postJson(CHAT_API_URL, {
       model: modelId,
       messages: [
@@ -347,12 +375,12 @@ function App() {
         },
       ],
       stream: false,
-    })
+    }, signal)
 
     return normalizeReply(data)
   }
 
-  const submitDocumentLane = async ({ userPrompt, file }) => {
+  const submitDocumentLane = async ({ userPrompt, file, signal }) => {
     const parsePayload = {
       model: DOCUMENT_PARSE_MODEL_ID,
       input: [
@@ -365,7 +393,7 @@ function App() {
       ],
     }
 
-    const parsedData = await postJson(DOCUMENT_PARSE_API_URL, parsePayload)
+    const parsedData = await postJson(DOCUMENT_PARSE_API_URL, parsePayload, signal)
     const extractedText =
       parsedData?.output_text ||
       parsedData?.text ||
@@ -386,6 +414,7 @@ function App() {
         'Extracted document text:',
         `${extractedText}`,
       ].join('\n'),
+      signal,
     })
   }
 
@@ -400,6 +429,11 @@ function App() {
 
     if (loading) return
     if (!hasText && !hasImage && !hasFile) return
+
+    // PERF-21: cancel any previous in-flight request
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
 
     setError('')
     setLoading(true)
@@ -418,6 +452,9 @@ function App() {
     upsertThreadMessages(activeThread.id, [...currentMessages, userMessage], nextTitle)
     resetComposer()
 
+    // FRONT-13: build conversation history for multi-turn context
+    const history = currentMessages.slice(-20) // Keep last 20 messages to avoid token overflow
+
     try {
       let reply = ''
       let nextLane = 'chat'
@@ -426,6 +463,7 @@ function App() {
         nextLane = 'document'
         reply = await submitDocumentLane({
           userPrompt: prompt,
+          signal: controller.signal,
           file: fileAttachment,
         })
       } else if (hasImage) {
@@ -439,6 +477,7 @@ function App() {
           modelId: selectedModel.id,
           imageUrl: imageData,
           textPrompt: prompt.trim() || 'Please analyze the attached image.',
+          signal: controller.signal,
         })
       } else {
         const promptParts = []
@@ -454,6 +493,8 @@ function App() {
         reply = await submitChatLane({
           modelId: selectedModel.id,
           textPrompt: promptParts.join('\n\n') || 'Please analyze the attached text file.',
+          history,
+          signal: controller.signal,
         })
       }
 
@@ -479,6 +520,8 @@ function App() {
         }
       }))
     } catch (err) {
+      // PERF-21: don't show error if the request was intentionally cancelled
+      if (err?.name === 'AbortError') return
       setError(err?.message || 'Something went wrong while contacting NVIDIA services.')
     } finally {
       setLoading(false)

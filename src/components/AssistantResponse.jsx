@@ -1,5 +1,7 @@
+import { useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeSanitize from 'rehype-sanitize'
 import { FaRobot, FaUser } from 'react-icons/fa'
 import markdownComponents from './markdown/markdownComponents.jsx'
 
@@ -44,7 +46,11 @@ const MessageBubble = ({ message, isLatestAssistantMessage }) => {
 
         <div className="prose prose-invert prose-sm max-w-none text-sm leading-relaxed prose-pre:whitespace-pre-wrap prose-pre:break-words prose-pre:overflow-x-auto prose-code:break-words">
           {isAssistant ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeSanitize]}
+              components={markdownComponents}
+            >
               {message.content}
             </ReactMarkdown>
           ) : (
@@ -69,6 +75,13 @@ const MessageBubble = ({ message, isLatestAssistantMessage }) => {
 }
 
 const AssistantResponse = ({ messages, loading }) => {
+  // FRONT-14: auto-scroll to latest message
+  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
   if (!messages.length) {
     return (
       <div className="flex flex-1 min-h-[280px] items-center justify-center rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/40 px-6 py-10 text-center">
@@ -104,6 +117,9 @@ const AssistantResponse = ({ messages, loading }) => {
           </div>
         </div>
       )}
+
+      {/* FRONT-14: scroll anchor */}
+      <div ref={scrollRef} />
     </div>
   )
 }
