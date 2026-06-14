@@ -2,27 +2,27 @@
 
 import CodeBlock from './CodeBlock'
 
-// Helper function to create styled HTML elements with consistent className
-const asTag = (Tag, className) => ({ children }) => <Tag className= {className}> {children} </Tag>
+// FRONT-17: fixed — no spurious whitespace around children
+const asTag = (Tag, className) => ({ children }) => <Tag className={className}>{children}</Tag>
 
-//Configuration object mapping markdown elements to React components with custom styling
+// Configuration object mapping markdown elements to React components with custom styling
 const markdownComponents = {
     // Code block with syntax highlighting 
     code : CodeBlock,
-    //Tables with horizontal scrolling for mobile
+    // Tables with horizontal scrolling for mobile
     table : ({ children }) => (
         <div className='overflow-x-auto'>
             <table className='min-w-full border-collapse border border-zinc-700'>{children}</table>
         </div>
     ),
-    // Blockqoutes with blue accent border
-    blockqoute: ({ children }) => (
-        <blockquote className= 'border-l-4 border-blue-500 pl-4 italic text-zinc-300 bg-zinc-800/50 p-2 pb-1 rounded-r-lg mb-3'>
+    // FRONT-16: fixed typo — "blockqoute" → "blockquote"
+    blockquote: ({ children }) => (
+        <blockquote className='border-l-4 border-blue-500 pl-4 italic text-zinc-300 bg-zinc-800/50 p-2 pb-1 rounded-r-lg mb-3'>
             {children}
         </blockquote>
     ),
     // Horizontal Rules 
-    hr: () => <hr className= 'border-zinc-700 my-4' />,
+    hr: () => <hr className='border-zinc-700 my-4' />,
     // Table headers with dark background 
     th: asTag('th', 'border border-zinc-700 bg-zinc-800 px-4 py-2 text-left font-semibold'),
     // Table data cells

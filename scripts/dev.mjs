@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 
 const children = []
 
-const spawnProcess = (command, args, name) => {
+const spawnProcess = (command, args) => {
   const child = spawn(command, args, {
     stdio: 'inherit',
     shell: process.platform === 'win32',
